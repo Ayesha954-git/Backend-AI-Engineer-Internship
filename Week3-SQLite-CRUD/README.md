@@ -44,9 +44,9 @@ Week3-SQLite-CRUD/
 └── README.md
 
 (Run these Commands)
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv venv  
+.\venv\Scripts\Activate.ps1  
 pip install -r requirements.txt
-python database.py
-uvicorn main:app --reload
+python database.py  
+uvicorn main:app --reload  
 http://127.0.0.1:8000/docs
