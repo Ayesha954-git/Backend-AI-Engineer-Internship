@@ -5,69 +5,74 @@ from database import get_connection
 
 app = FastAPI(
     title="Task CRUD API",
-    description="Simple CRUD API using FastAPI",
+    description="Simple CRUD API using FastAPI and PostgreSQL",
     version="1.0.0"
 )
 
+
 # --------------------
-# Data Model
+# Data Models
 # --------------------
+
+class TaskCreate(BaseModel):
+    title: str
+    completed: bool = False
+
+
 class Task(BaseModel):
     id: int
     title: str
     completed: bool = False
 
 
-tasks = []
-
 # --------------------
 # Home Route
 # --------------------
+
 @app.get("/")
 def home():
     return {"message": "Welcome to the Task CRUD API"}
 
+
 # --------------------
 # CREATE
 # --------------------
-@app.post("/tasks")
-def create_task(task: Task):
+
+@app.post("/tasks", response_model=Task, status_code=201)
+def create_task(task: TaskCreate):
     connection = get_connection()
 
-    existing_task = connection.execute(
-        "SELECT id FROM tasks WHERE id = ?",
-        (task.id,)
-    ).fetchone()
-
-    if existing_task is not None:
-        connection.close()
-        raise HTTPException(
-            status_code=400,
-            detail="Task ID already exists"
-        )
-
-    connection.execute(
-        "INSERT INTO tasks (id, title, done) VALUES (?, ?, ?)",
-        (task.id, task.title, int(task.completed))
+    cursor = connection.execute(
+        """
+        INSERT INTO tasks (title, done)
+        VALUES (%s, %s)
+        RETURNING id, title, done
+        """,
+        (task.title, task.completed)
     )
+
+    row = cursor.fetchone()
 
     connection.commit()
     connection.close()
 
-    return {
-        "message": "Task created successfully",
-        "task": task
-    }
+    return Task(
+        id=row[0],
+        title=row[1],
+        completed=row[2]
+    )
+
 
 # --------------------
 # READ ALL
 # --------------------
+
 @app.get("/tasks", response_model=List[Task])
 def get_tasks():
     connection = get_connection()
 
     rows = connection.execute(
-        "SELECT id, title, done FROM tasks"
+        "SELECT id, title, done FROM tasks ORDER BY id"
     ).fetchall()
 
     connection.close()
@@ -76,92 +81,106 @@ def get_tasks():
         Task(
             id=row[0],
             title=row[1],
-            completed=bool(row[2])
+            completed=row[2]
         )
         for row in rows
     ]
 
+
 # --------------------
 # READ ONE
 # --------------------
-@app.get("/tasks/{task_id}")
+
+@app.get("/tasks/{task_id}", response_model=Task)
 def get_task(task_id: int):
     connection = get_connection()
 
     row = connection.execute(
-        "SELECT id, title, done FROM tasks WHERE id = ?",
+        """
+        SELECT id, title, done
+        FROM tasks
+        WHERE id = %s
+        """,
         (task_id,)
     ).fetchone()
 
     connection.close()
 
     if row is None:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
 
     return Task(
         id=row[0],
         title=row[1],
-        completed=bool(row[2])
+        completed=row[2]
     )
+
 
 # --------------------
 # UPDATE
 # --------------------
-@app.put("/tasks/{task_id}")
-def update_task(task_id: int, updated_task: Task):
+
+@app.put("/tasks/{task_id}", response_model=Task)
+def update_task(task_id: int, updated_task: TaskCreate):
     connection = get_connection()
 
-    existing_task = connection.execute(
-        "SELECT id FROM tasks WHERE id = ?",
-        (task_id,)
-    ).fetchone()
-
-    if existing_task is None:
-        connection.close()
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    connection.execute(
+    row = connection.execute(
         """
         UPDATE tasks
-        SET title = ?, done = ?
-        WHERE id = ?
+        SET title = %s, done = %s
+        WHERE id = %s
+        RETURNING id, title, done
         """,
         (
             updated_task.title,
-            int(updated_task.completed),
+            updated_task.completed,
             task_id
         )
-    )
+    ).fetchone()
 
     connection.commit()
     connection.close()
 
-    updated_task.id = task_id
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
 
-    return {
-        "message": "Task updated successfully",
-        "task": updated_task
-    }
+    return Task(
+        id=row[0],
+        title=row[1],
+        completed=row[2]
+    )
+
+
 # --------------------
 # DELETE
 # --------------------
-@app.delete("/tasks/{task_id}", status_code=204)
+
+@app.delete("/tasks/{task_id}")
 def delete_task(task_id: int):
     connection = get_connection()
 
-    existing_task = connection.execute(
-        "SELECT id FROM tasks WHERE id = ?",
+    row = connection.execute(
+        """
+        DELETE FROM tasks
+        WHERE id = %s
+        RETURNING id
+        """,
         (task_id,)
     ).fetchone()
 
-    if existing_task is None:
-        connection.close()
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    connection.execute(
-        "DELETE FROM tasks WHERE id = ?",
-        (task_id,)
-    )
-
     connection.commit()
     connection.close()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
+
+    return {"message": "Task deleted successfully"}

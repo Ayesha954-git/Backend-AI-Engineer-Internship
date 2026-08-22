@@ -1,10 +1,14 @@
-import sqlite3
+import os
+import psycopg
+from dotenv import load_dotenv
 
-DATABASE_NAME = "tasks.db"
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 def get_connection():
-    return sqlite3.connect(DATABASE_NAME)
+    return psycopg.connect(DATABASE_URL)
 
 
 def create_table():
@@ -21,7 +25,6 @@ def create_table():
     connection.commit()
     connection.close()
 
-
 def seed_tasks():
     connection = get_connection()
 
@@ -29,19 +32,19 @@ def seed_tasks():
     count = cursor.fetchone()[0]
 
     if count == 0:
-        connection.executemany(
-            "INSERT INTO tasks (title, done) VALUES (?, ?)",
-            [
-                ("Learn SQLite", 0),
-                ("Connect FastAPI to SQLite", 0),
-                ("Test CRUD API", 0)
-            ]
-        )
+        with connection.cursor() as cursor:
+            cursor.executemany(
+                "INSERT INTO tasks (title, done) VALUES (%s, %s)",
+                [
+                    ("Learn PostgreSQL", False),
+                    ("Connect FastAPI to PostgreSQL", False),
+                    ("Test CRUD API", False)
+                ]
+            )
 
         connection.commit()
 
     connection.close()
-
 
 if __name__ == "__main__":
     create_table()
