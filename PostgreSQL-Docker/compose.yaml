@@ -1,0 +1,26 @@
+services:
+
+  db:
+    image: postgres:17
+    container_name: taskdb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: tasks
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: taskapi
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:dev@db:5432/tasks
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
