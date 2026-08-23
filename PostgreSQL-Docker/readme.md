@@ -1,15 +1,15 @@
 PostgreSQL Docker CRUD API
 
-A simple **Task CRUD API** built with **FastAPI, PostgreSQL, Docker, and Psycopg 3**.
+A Task CRUD API built with **FastAPI, PostgreSQL 17, Docker Compose, Psycopg 3, and Pydantic**.
 
-This project demonstrates how to connect a FastAPI backend to a PostgreSQL database running inside a Docker container and perform Create, Read, Update, and Delete operations.
+This project demonstrates how to run both the FastAPI backend and PostgreSQL database in Docker and connect them through Docker Compose.
 
 🚀 Technologies
 
 * Python
 * FastAPI
 * PostgreSQL 17
-* Docker
+* Docker & Docker Compose
 * Psycopg 3
 * Pydantic
 * python-dotenv
@@ -19,113 +19,91 @@ This project demonstrates how to connect a FastAPI backend to a PostgreSQL datab
 
 ```text
 PostgreSQL-Docker/
-│
-├── main.py              # FastAPI application and CRUD endpoints
-├── database.py          # PostgreSQL connection and database setup
-├── requirements.txt     # Python dependencies
-├── .env.example         # Example database configuration
+├── main.py
+├── database.py
+├── Dockerfile
+├── compose.yaml
+├── requirements.txt
+├── .env.example
 ├── .gitignore
 └── README.md
 ```
 
 🔗 How It Works
 
-Client / Swagger
+```text
+Swagger / Client
        ↓
     FastAPI
        ↓
-    main.py
+    Psycopg 3
        ↓
-   Psycopg 3
+ PostgreSQL
+   (Docker)
        ↓
-PostgreSQL (Docker)
-       ↓
-    tasks table
+  tasks table
+```
 
-FastAPI handles the API requests, while PostgreSQL stores the task data permanently.
+Docker Compose runs the API and PostgreSQL as separate containers and connects them through the Compose network.
 
 🗄️ Database
 
-The PostgreSQL database is:
+* **Database:** `tasks`
+* **User:** `postgres`
+* **PostgreSQL:** 17
+* **Container:** `taskdb`
+* **Port:** `5432`
 
-Database: tasks
-Host: localhost
-Port: 5432
+The `tasks` table stores:
 
-
-The `tasks` table contains:
-
-| Column  | Type    | Description            |
-| ------- | ------- | ---------------------- |
-| `id`    | integer | Auto-generated task ID |
-| `title` | text    | Task title             |
-| `done`  | boolean | Completion status      |
+| Column | Type    | Description            |
+| ------ | ------- | ---------------------- |
+| id     | integer | Auto-generated task ID |
+| title  | text    | Task title             |
+| done   | boolean | Completion status      |
 
 ⚙️ Setup
-
-1. Create and activate virtual environment
-
-```powershell
-python -m venv venv
-venv\Scripts\Activate.ps1
-```
-
-2. Install dependencies
-
-```powershell
-pip install -r requirements.txt
-```
-
-3. Configure `.env`
 
 Create a `.env` file:
 
 ```env
+POSTGRES_PASSWORD=YOUR_PASSWORD
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/tasks
 ```
 
-Replace `YOUR_PASSWORD` with your PostgreSQL password.
+Do **not** commit `.env` to GitHub.
 
-**Do not commit `.env` to GitHub.**
+### Start the application
 
-4. Start PostgreSQL
+Make sure Docker Desktop is running, then:
 
-Make sure Docker Desktop is running and check:
+```powershell
+docker compose up -d
+```
+
+Check the containers:
 
 ```powershell
 docker ps
 ```
 
-The PostgreSQL container used in this project is:
+You should see:
 
 ```text
 taskdb
+taskapi
 ```
 
-5. Initialize the database
-
-```powershell
-python database.py
-```
-
-This creates the `tasks` table and adds sample tasks.
-
-6. Start FastAPI
-
-```powershell
-uvicorn main:app --reload
-```
-
-API:
+API
 
 ```text
-http://127.0.0.1:8000
+http://localhost:8000
 ```
 
 Swagger documentation:
 
 ```text
-http://127.0.0.1:8000/docs
+http://localhost:8000/docs
 ```
 
 📌 API Endpoints
@@ -139,28 +117,15 @@ http://127.0.0.1:8000/docs
 | PUT    | `/tasks/{id}` | Update a task   |
 | DELETE | `/tasks/{id}` | Delete a task   |
 
- Example: Create a Task
-
-```json
-{
-  "title": "Learn Docker",
-  "completed": false
-}
-```
-
-The task ID is generated automatically by PostgreSQL.
-
 🧪 Testing
 
-The API can be tested directly through **Swagger UI**:
+CRUD operations can be tested through Swagger UI:
 
 ```text
-http://127.0.0.1:8000/docs
+http://localhost:8000/docs
 ```
 
-You can test all CRUD operations from there.
-
-You can also verify the database directly:
+The PostgreSQL database can also be checked directly:
 
 ```powershell
 docker exec -it taskdb psql -U postgres -d tasks
@@ -174,19 +139,17 @@ SELECT * FROM tasks;
 
 🔐 Security
 
-Database credentials are stored in `.env` and are not committed to GitHub.
+Database credentials are stored in `.env`.
 
-Only `.env.example` is included in the repository.
+The `.env` file is excluded from GitHub, while `.env.example` is provided as a template.
 
 🎯 Learning Outcomes
 
-This project demonstrates:
-
-* Building REST APIs with FastAPI
-* Implementing CRUD operations
-* Connecting Python to PostgreSQL
-* Running PostgreSQL with Docker
-* Using Psycopg 3
-* Managing environment variables
-* Testing APIs with Swagger UI
-* Using Git and GitHub
+* Built a REST API with FastAPI
+* Implemented CRUD operations
+* Connected FastAPI to PostgreSQL using Psycopg 3
+* Containerized FastAPI and PostgreSQL with Docker
+* Used Docker Compose for multi-container setup
+* Managed environment variables
+* Tested APIs using Swagger UI
+* Used Git and GitHub
